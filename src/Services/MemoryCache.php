@@ -9,6 +9,10 @@ use DateTimeZone;
 use DateTime;
 use DateInterval;
 
+use function sha1;
+use function str_replace;
+
+
 class MemoryCache implements CacheInterface
 {
     private array $cache = [];
