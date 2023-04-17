@@ -4,15 +4,21 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use function file_get_contents;
-use function http_build_query;
-use function json_decode;
-use function json_encode;
-use function stream_context_create;
 use App\Services\MemoryCache;
+use App\Services\FileCache;
+use App\Http\HttpResponse;
 use Exception;
 
-class HttpRequest extends MemoryCache
+use function file_get_contents;
+use function http_build_query;
+use function intval;
+use function json_decode;
+use function json_encode;
+use function preg_match;
+use function stream_context_create;
+
+
+class HttpRequest extends FileCache
 {   
     /** 
      *  O atributo  baseUrl serve para deinir a url base da API
@@ -24,15 +30,15 @@ class HttpRequest extends MemoryCache
      * através dos métodos setTtl e getTtl
      */
     private int $ttl = 3600;
-    
+
 
     public function __construct(string $baseUrl)
     { 
-        $this->baseUrl = $baseUrl;  
+        $this->baseUrl = $baseUrl;
     }
 
 
-    public function get(string $endpoint, array $parameters = null): array
+    public function get(string $endpoint, array $parameters = null): object
     {
         $endpoint = $this->buildEndPoint($endpoint, $parameters);
         $data = $this->pull($endpoint);
@@ -47,22 +53,14 @@ class HttpRequest extends MemoryCache
                 $this->set($endpoint, $data, $this->ttl);
                 
             } catch (Exception $ex) {
-                return [
-                    'status' => 'NOK',
-                    'message' => $ex->getMessage(),
-                    'data' => ''
-                ];
+                return new HttpResponse($ex->getCode(), [], [$ex->getMessage()]);
             }         
         }
 
-        return [
-            'status' => 'OK',
-            'message' => 'HTTP request success',
-            'data' => $data
-        ];
+        return new HttpResponse($data['httpCode'], $data['header'], $data['data']);
     }
 
-    public function post(string $endpoint, array $data = null): array
+    public function post(string $endpoint, array $data = null): object
     {   
 
         try {
@@ -70,21 +68,13 @@ class HttpRequest extends MemoryCache
             $data = $this->call('POST', $endpoint, $data);
             
         } catch (Exception $ex) {
-            return [
-                'status' => 'NOK',
-                'message' => $ex->getMessage(),
-                'data' => ''
-            ];
+            return new HttpResponse($ex->getCode(), [], [$ex->getMessage()]);
         }      
 
-        return [
-            'status' => 'OK',
-            'message' => 'HTTP request success',
-            'data' => $data
-        ];
+        return new HttpResponse($data['httpCode'], $data['header'], $data['data']);
     }
 
-    public function put(string $endpoint, array $data = null): array
+    public function put(string $endpoint,array $data = null): object
     {   
         try {
             /**
@@ -98,22 +88,14 @@ class HttpRequest extends MemoryCache
             $this->set($endpoint, $data, $this->ttl);
             
         } catch (Exception $ex) {
-            return [
-                'status' => 'NOK',
-                'message' => $ex->getMessage(),
-                'data' => ''
-            ];
+            return new HttpResponse($ex->getCode(), [], [$ex->getMessage()]);
         }      
         
-        return [
-            'status' => 'OK',
-            'message' => 'HTTP request success',
-            'data' => $data
-        ];
+        return new HttpResponse($data['httpCode'], $data['header'], $data['data']);
      
     }
 
-    public function delete(string $endpoint): array
+    public function delete(string $endpoint): string
     {   
         try {
             $endpoint = $this->buildEndPoint($endpoint);
@@ -121,18 +103,10 @@ class HttpRequest extends MemoryCache
             $this->remove($endpoint);
             
         } catch (Exception $ex) {
-            return [
-                'status' => 'NOK',
-                'message' => $ex->getMessage(),
-                'data' => ''
-            ];
+            return $ex->getMessage();
         }  
 
-        return [
-            'status' => 'OK',
-            'message' => 'HTTP request success',
-            'data' => ''
-        ];
+        return 'Excluded';
     }
 
     public function getTtl(): int
@@ -183,10 +157,13 @@ class HttpRequest extends MemoryCache
             /**
              * Lança uma exceção para qualquer http code menor que 200 e maior ou igual a 300
              */
-            throw new \Exception("HTTP request failed: {$out[0]}", $httpCode);
+            throw new Exception("HTTP request failed: {$out[0]}", $httpCode);
         }
     
-        
-        return json_decode($response, true);
+        return [
+            'httpCode' => $httpCode,
+            'header' => $http_response_header,
+            'data' =>  json_decode($response, true)
+        ];
     }
 }
