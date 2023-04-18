@@ -1,16 +1,19 @@
 <?php
 
-use App\HttpRequest;
+use App\Http\HttpRequest;
 
 require __DIR__.'/../vendor/autoload.php';
+
 
 $request = new HttpRequest('https://jsonplaceholder.typicode.com/');
 
 
 //GET
-$response = $request->get('posts/1');
-
-//$response = $request->get('posts?userId=1');
+// $response = $request->get('posts/1');
+// echo '<pre>';
+// var_dump($response->getBody());
+// var_dump($response->gethttpCode());
+// var_dump($response->getHeaders());
 
 
 //POST
@@ -21,7 +24,11 @@ $response = $request->get('posts/1');
 //     'userId' => 1 
 // ];
 
-//$response = $request->post('posts', $data);
+// $response = $request->post('posts', $data);
+// echo '<pre>';
+// var_dump($response->getBody());
+// var_dump($response->gethttpCode());
+// var_dump($response->getHeaders());
 
 
 //PUT 
@@ -33,12 +40,18 @@ $response = $request->get('posts/1');
 //     'userId' => 1 
 // ];
 
-//$response = $request->put('posts/1',$data);
+// $request->put('posts/1',$data);
+
+// $response = $request->get('posts/1');
+// echo '<pre>';
+// var_dump($response->getBody());
+// var_dump($response->gethttpCode());
+// var_dump($response->getHeaders());
 
 
 // DELETE
-//$response = $request->delete('posts/1');
+// $request->delete('posts/1');
+// $request->clear();
 
 
-echo '<pre>';
-var_dump($response);
+
