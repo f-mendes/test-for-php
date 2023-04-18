@@ -59,7 +59,6 @@ class MemoryCache implements CacheInterface
     {   
         $this->cache = [];
         return true;
-
     }
 
     /**

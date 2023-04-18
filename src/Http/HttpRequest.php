@@ -7,7 +7,6 @@ namespace App\Http;
 use App\Services\MemoryCache;
 use App\Services\FileCache;
 use App\Http\HttpResponse;
-use Exception;
 
 use function file_get_contents;
 use function http_build_query;
@@ -26,8 +25,8 @@ class HttpRequest extends FileCache
     private string $baseUrl;
 
     /**
-     * O atributo ttl defini um tempo de vida padrão de 1 hora para o cache, mas pode ser alterado e acessado
-     * através dos métodos setTtl e getTtl
+     * O atributo ttl defini um tempo de vida padrão de 1 hora para o cache, 
+     * mas pode ser alterado e acessado através dos métodos setTtl e getTtl
      */
     private int $ttl = 3600;
 
@@ -45,16 +44,15 @@ class HttpRequest extends FileCache
 
         /**
          * Essa condição verifica se o array do cache retornou vazio
-         * Se verdadeiro busca os dados na fonte original e inseri no cache
+         * Se verdadeiro busca os dados na fonte original e armazena no cache
          */
         if(empty($data)){
-            try {
-                $data = $this->call('GET', $endpoint);
-                $this->set($endpoint, $data, $this->ttl);
-                
-            } catch (Exception $ex) {
-                return new HttpResponse($ex->getCode(), [], [$ex->getMessage()]);
-            }         
+            
+            $data = $this->call('GET', $endpoint);
+
+            //Armazena os dados no cache caso a requisição seja valida
+            if ($data['httpCode'] >= 200 || $data['httpCode'] < 300)
+                $this->set($endpoint, $data, $this->ttl);      
         }
 
         return new HttpResponse($data['httpCode'], $data['header'], $data['data']);
@@ -62,51 +60,40 @@ class HttpRequest extends FileCache
 
     public function post(string $endpoint, array $data = null): object
     {   
-
-        try {
-            $endpoint = $this->buildEndPoint($endpoint);
-            $data = $this->call('POST', $endpoint, $data);
+ 
+        $endpoint = $this->buildEndPoint($endpoint);
+        $data = $this->call('POST', $endpoint, $data);
             
-        } catch (Exception $ex) {
-            return new HttpResponse($ex->getCode(), [], [$ex->getMessage()]);
-        }      
-
         return new HttpResponse($data['httpCode'], $data['header'], $data['data']);
     }
 
     public function put(string $endpoint,array $data = null): object
-    {   
-        try {
-            /**
-             * Para a atualização primeiro é removido os dados do cache,
-             * em seguida busca os dados na fonte original 
-             * e por último atualiza o cache
-             */
-            $endpoint = $this->buildEndPoint($endpoint);
-            $this->remove($endpoint);
-            $data = $this->call('PUT', $endpoint, $data);
-            $this->set($endpoint, $data, $this->ttl);
-            
-        } catch (Exception $ex) {
-            return new HttpResponse($ex->getCode(), [], [$ex->getMessage()]);
-        }      
+    {   /**
+         * Para atualização primeiro é removido os dados do cache,
+         * em seguida busca os dados na fonte original 
+         * e por último atualiza o cache
+         */
+
+        $endpoint = $this->buildEndPoint($endpoint);
+        $this->remove($endpoint);
+        $data = $this->call('PUT', $endpoint, $data);
+        
+        //Armazena os dados no cache caso a requisição seja valida
+        if ($data['httpCode'] >= 200 || $data['httpCode'] < 300)
+            $this->set($endpoint, $data, $this->ttl);   
+
         
         return new HttpResponse($data['httpCode'], $data['header'], $data['data']);
      
     }
 
-    public function delete(string $endpoint): string
+    public function delete(string $endpoint): object
     {   
-        try {
-            $endpoint = $this->buildEndPoint($endpoint);
-            $this->call('DELETE', $endpoint);
-            $this->remove($endpoint);
-            
-        } catch (Exception $ex) {
-            return $ex->getMessage();
-        }  
-
-        return 'Excluded';
+        $endpoint = $this->buildEndPoint($endpoint);
+        $this->remove($endpoint);
+        $data = $this->call('DELETE', $endpoint);
+                
+        return new HttpResponse($data['httpCode'], $data['header'], $data['data']);
     }
 
     public function getTtl(): int
@@ -119,10 +106,6 @@ class HttpRequest extends FileCache
         $this->ttl = $ttl;
     }
 
-    /**
-     * Desenvolvi esse método para garantir que exista uma chave única no cache baseado 
-     * no endpoint com os parâmetros
-     */
     private function buildEndPoint(string $endpoint, array $parameters = null): string 
     {
         $endpoint = ltrim($endpoint, '/');
@@ -148,18 +131,11 @@ class HttpRequest extends FileCache
         $response = file_get_contents($url, false, stream_context_create($opts));
 
         /**
-         * Utilizei essa regex para pegar só código do http code e facilitar o lançamento de exceções
+         * Utilizei essa função para pegar o http code
          */
         preg_match( "#HTTP/[0-9\.]+\s+([0-9]+)#",$http_response_header[0], $out );
         $httpCode = intval($out[1]);
         
-        if ($httpCode < 200 || $httpCode >= 300) {
-            /**
-             * Lança uma exceção para qualquer http code menor que 200 e maior ou igual a 300
-             */
-            throw new Exception("HTTP request failed: {$out[0]}", $httpCode);
-        }
-    
         return [
             'httpCode' => $httpCode,
             'header' => $http_response_header,

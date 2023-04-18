@@ -84,8 +84,8 @@ class FileCache implements CacheInterface
     }
 
     /** 
-    *  Nesse método eu usei a classe RecursiveIteratorIterator para criar um iterador recursivo para diretórios
-    *  passando no contrutor a classe RecursiveDirectoryIterator
+    *  Nesse método eu usei a classe RecursiveIteratorIterator 
+    *  para criar um iterador recursivo para diretórios
     */
     public function clear(): bool
     {       
@@ -108,12 +108,11 @@ class FileCache implements CacheInterface
 
      /**
      * Essa função cria a estrura de diretórios e o arquivo de cache baseado no endpoint da requisição
-     * Eu segui o padrão de diretório de cache so Laravel
+     * Eu segui o padrão de diretório de cache do Laravel
      */
     private function getFilePath(string $key): string
-    {   
-       
-        $hash = sha1($key);
+    {       
+        $hash = sha1(str_replace(['/','?','=','&'],'_',$key));
         return $this->dir . substr($hash, 0, 2) . '/' . substr($hash, 2, 2) . '/' . $hash;
     }
 
@@ -130,7 +129,6 @@ class FileCache implements CacheInterface
         return $date->add($dateInterval);
 
     }
-
 
     private function getDateCurrent(): object
     {   

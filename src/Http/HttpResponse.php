@@ -6,13 +6,13 @@ namespace App\Http;
 
 class HttpResponse 
 {   
-    private $httpCode;
-    private $headers;
-    private $body;
+    private int $httpCode;
+    private array $headers;
+    private array $body;
 
     
     public function __construct(int $httpCode, array $headers, array $body)
-    {
+    {   
         $this->httpCode = $httpCode;
         $this->headers = $headers;
         $this->body = $body;
@@ -29,7 +29,7 @@ class HttpResponse
     }
 
     public function getBody(): array 
-    {
+    {   
         return $this->body;
     }
 }
